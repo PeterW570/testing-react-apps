@@ -2,21 +2,42 @@
 // http://localhost:3000/counter-hook
 
 import * as React from 'react'
-import {render, screen} from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import {render, renderHook, act} from '@testing-library/react'
 import useCounter from '../../components/use-counter'
 
-// 🐨 create a simple function component that uses the useCounter hook
-// and then exposes some UI that our test can interact with to test the
-// capabilities of this hook
-// 💰 here's how to use the hook:
-// const {count, increment, decrement} = useCounter()
+function setup({initialProps} = {}) {
+  const result = {}
+  function TestComponent(props) {
+    Object.assign(result, useCounter(props))
+    return null
+  }
+  render(<TestComponent {...initialProps} />)
+  return result
+}
 
 test('exposes the count and increment/decrement functions', () => {
-  // 🐨 render the component
-  // 🐨 get the elements you need using screen
-  // 🐨 assert on the initial state of the hook
-  // 🐨 interact with the UI using userEvent and assert on the changes in the UI
+  const result = setup()
+  expect(result.count).toBe(0)
+  act(() => result.increment())
+  expect(result.count).toBe(1)
+  act(() => result.decrement())
+  expect(result.count).toBe(0)
 })
 
-/* eslint no-unused-vars:0 */
+test('allows customization of the initial count', () => {
+  const result = setup({initialProps: {initialCount: 3}})
+  expect(result.count).toBe(3)
+})
+
+// using renderHook from RTL instead of using the setup fn we implemented
+test('the step can be changed', () => {
+  const {result, rerender} = renderHook(useCounter, {
+    initialProps: {step: 3},
+  })
+  expect(result.current.count).toBe(0)
+  act(() => result.current.increment())
+  expect(result.current.count).toBe(3)
+  rerender({step: 2})
+  act(() => result.current.decrement())
+  expect(result.current.count).toBe(1)
+})
